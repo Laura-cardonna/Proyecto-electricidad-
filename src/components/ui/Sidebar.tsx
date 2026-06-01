@@ -144,12 +144,13 @@ export const Sidebar = () => {
 
         <div className="grid grid-cols-2 gap-3">
           <label className="block text-xs text-white/70 space-y-1">
-            <span>Carga</span>
+            <span>Carga (+ / -)</span>
             <input
               type="number"
               step="0.1"
               disabled={isRunning}
               value={charge}
+              inputMode="decimal"
               onChange={(event) => setCharge(Number(event.target.value))}
               className="w-full rounded-lg bg-black/30 border border-white/10 px-3 py-2 text-white disabled:opacity-50"
             />

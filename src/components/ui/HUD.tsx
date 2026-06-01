@@ -18,7 +18,7 @@ export const HUD = () => {
           Y: <span className="text-[#a9f0ad]">{formatValue(position.y)}</span>
         </div>
         <div>
-          Z: <span className="text-[#ff9f68]">{formatValue(position.z)}</span>
+          Z: <span className="text-[#7fd9ff]">{formatValue(position.z)}</span>
         </div>
       </div>
     </div>

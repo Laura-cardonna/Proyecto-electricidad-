@@ -53,7 +53,7 @@ export const AxesGuide = ({ length }: AxesGuideProps) => {
           [0, 0, -length],
           [0, 0, length],
         ]}
-        color="#ff9f68"
+        color="#7fd9ff"
         lineWidth={1.5}
         transparent
         opacity={0.62}
@@ -106,7 +106,7 @@ export const AxesGuide = ({ length }: AxesGuideProps) => {
               [0, -0.35, distance],
               [0, 0.35, distance],
             ]}
-            color="#ff9f68"
+            color="#7fd9ff"
             lineWidth={1}
             transparent
             opacity={0.18}
@@ -116,7 +116,7 @@ export const AxesGuide = ({ length }: AxesGuideProps) => {
               [0, -0.35, -distance],
               [0, 0.35, -distance],
             ]}
-            color="#ff9f68"
+            color="#7fd9ff"
             lineWidth={1}
             transparent
             opacity={0.18}
@@ -136,7 +136,7 @@ export const AxesGuide = ({ length }: AxesGuideProps) => {
         <div style={{ ...axisLabelStyle, color: "#a9f0ad" }}>Y</div>
       </Html>
       <Html center distanceFactor={18} position={[0, 0, length + 0.5]}>
-        <div style={{ ...axisLabelStyle, color: "#9de7ff" }}>Z</div>
+        <div style={{ ...axisLabelStyle, color: "#7fd9ff" }}>Z</div>
       </Html>
     </group>
   );
