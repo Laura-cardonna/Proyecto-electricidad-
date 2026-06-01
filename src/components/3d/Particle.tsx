@@ -18,38 +18,40 @@ export const Particle = () => {
     isFieldActive,
     isRunning,
     updateStep,
+    trailVersion,
   } = useSimulation();
 
   useEffect(() => {
     meshRef.current?.position.copy(position);
   }, [position]);
 
-// Modifica el useFrame en Particle.tsx
-useFrame((state, delta) => {
-  if (!isRunning) {
-    // Si no está corriendo, forzamos la posición inicial visualmente
-    if (meshRef.current) {
-      meshRef.current.position.copy(position);
+  // Modifica el useFrame en Particle.tsx
+  useFrame((state, delta) => {
+    if (!isRunning) {
+      // Si no está corriendo, forzamos la posición inicial visualmente
+      if (meshRef.current) {
+        meshRef.current.position.copy(position);
+      }
+      return;
     }
-    return;
-  }
 
-  const dt = Math.min(delta, 0.01);
-  const nextStep = stepRK4(
-    { position, velocity },
-    (samplePosition, time) => sampleCombinedFields(fieldSources, samplePosition, time, isFieldActive),
-    charge,
-    mass,
-    dt,
-    state.clock.elapsedTime
-  );
+    const dt = Math.min(delta, 0.01);
+    const nextStep = stepRK4(
+      { position, velocity },
+      (samplePosition, time) =>
+        sampleCombinedFields(fieldSources, samplePosition, time, isFieldActive),
+      charge,
+      mass,
+      dt,
+      state.clock.elapsedTime,
+    );
 
-  updateStep(nextStep.position, nextStep.velocity);
+    updateStep(nextStep.position, nextStep.velocity);
 
-  if (meshRef.current) {
-    meshRef.current.position.copy(nextStep.position);
-  }
-});
+    if (meshRef.current) {
+      meshRef.current.position.copy(nextStep.position);
+    }
+  });
 
   return (
     <group>
@@ -59,12 +61,24 @@ useFrame((state, delta) => {
         <pointLight distance={10} intensity={5} color="#F48FB1" />
       </mesh>
 
+      {/* Outer soft halo trail (wider, orange-ish) */}
       <Trail
+        key={`outer-${trailVersion}`}
         target={trailTarget}
-        width={1.5}
-        length={50}
+        width={3}
+        length={80}
+        color={new THREE.Color("#ff9f68")}
+        attenuation={(t) => (1 - t) * (1 - t)}
+      />
+
+      {/* Inner bright trail (thin, pink) */}
+      <Trail
+        key={`inner-${trailVersion}`}
+        target={trailTarget}
+        width={1.6}
+        length={60}
         color={new THREE.Color("#F48FB1")}
-        attenuation={(t) => t * t}
+        attenuation={(t) => 1 - t}
       />
     </group>
   );

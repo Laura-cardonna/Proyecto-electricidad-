@@ -13,6 +13,7 @@ export const Sidebar = () => {
     toggleField,
     isRunning,
     startSimulation,
+    toggleSimulation,
     reset,
     setInitialPosition,
     setInitialVelocity,
@@ -57,6 +58,17 @@ export const Sidebar = () => {
           }`}
         >
           {isRunning ? "EN VUELO..." : "LANZAR PARTÍCULA"}
+        </button>
+
+        <button
+          onClick={toggleSimulation}
+          className={`w-full py-3 rounded-xl font-bold border-2 transition-all ${
+            isRunning
+              ? "border-amber-300 text-amber-200 bg-amber-300/10 hover:bg-amber-300/20"
+              : "border-emerald-300/40 text-emerald-100 bg-emerald-300/5 hover:bg-emerald-300/10"
+          }`}
+        >
+          {isRunning ? "PAUSAR MOVIMIENTO" : "CONTINUAR MOVIMIENTO"}
         </button>
 
         <button

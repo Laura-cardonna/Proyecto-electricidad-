@@ -21,6 +21,7 @@ interface SimulationState {
   fieldSources: FieldSource[];
 
   startSimulation: () => void;
+  toggleSimulation: () => void;
   toggleField: () => void;
   updateStep: (pos: THREE.Vector3, vel: THREE.Vector3) => void;
   setInitialPosition: (position: THREE.Vector3) => void;
@@ -32,6 +33,8 @@ interface SimulationState {
   removeFieldSource: (id: string) => void;
   toggleFieldSource: (id: string) => void;
   reset: () => void;
+  trailVersion: number;
+  bumpTrail: () => void;
 }
 
 const initialPosition = new THREE.Vector3(-10, 0, 0);
@@ -47,12 +50,18 @@ export const useSimulation = create<SimulationState>((set) => ({
   isRunning: false,
   isFieldActive: false,
   fieldSources: createDefaultFieldSources(),
+  trailVersion: 0,
 
   startSimulation: () =>
     set((state) => ({
       isRunning: true,
       position: state.initialPosition.clone(),
       velocity: state.initialVelocity.clone(),
+      trailVersion: state.trailVersion + 1,
+    })),
+  toggleSimulation: () =>
+    set((state) => ({
+      isRunning: !state.isRunning,
     })),
   toggleField: () => set((state) => ({ isFieldActive: !state.isFieldActive })),
 
@@ -61,6 +70,8 @@ export const useSimulation = create<SimulationState>((set) => ({
       position: newPos.clone(),
       velocity: newVel.clone(),
     }),
+
+  bumpTrail: () => set((state) => ({ trailVersion: state.trailVersion + 1 })),
 
   setInitialPosition: (position) =>
     set({
@@ -102,14 +113,16 @@ export const useSimulation = create<SimulationState>((set) => ({
       ),
     })),
 
-// En useSimulation.ts
-reset: () => set((state) => {
-  // 1. Detenemos cualquier cálculo antes de mover la posición
-  return {
-    isRunning: false,
-    isFieldActive: false,
-    position: state.initialPosition.clone(),
-    velocity: state.initialVelocity.clone(),
-  };
-}),
+  // En useSimulation.ts
+  reset: () =>
+    set((state) => {
+      // 1. Detenemos cualquier cálculo antes de mover la posición
+      return {
+        isRunning: false,
+        isFieldActive: false,
+        position: state.initialPosition.clone(),
+        velocity: state.initialVelocity.clone(),
+        trailVersion: state.trailVersion + 1,
+      };
+    }),
 }));
