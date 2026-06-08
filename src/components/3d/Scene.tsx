@@ -62,6 +62,7 @@ export const Scene = () => {
         <Field
           key={source.id}
           source={source}
+          allSources={fieldSources}
           visible={isFieldActive && source.enabled}
         />
       ))}

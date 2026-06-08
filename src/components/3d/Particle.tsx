@@ -9,45 +9,85 @@ import { Trail } from "@react-three/drei";
 export const Particle = () => {
   const meshRef = useRef<THREE.Mesh | null>(null);
   const trailTarget = meshRef as unknown as React.RefObject<THREE.Object3D>;
-  const {
-    position,
-    velocity,
-    charge,
-    mass,
-    fieldSources,
-    isFieldActive,
-    isRunning,
-    updateStep,
-    trailVersion,
-  } = useSimulation();
 
+  // ── Referencias mutables para evitar stale closures en useFrame ──────────
+  // useFrame captura el closure una sola vez; si leemos del store directamente
+  // siempre veremos los valores del primer render. Con refs, siempre tenemos
+  // el valor más reciente sin re-suscribir el loop de animación.
+  const positionRef = useRef(new THREE.Vector3());
+  const velocityRef = useRef(new THREE.Vector3());
+  const isRunningRef = useRef(false);
+  const isFieldActiveRef = useRef(false);
+  const chargeRef = useRef(1);
+  const massRef = useRef(1);
+  const fieldSourcesRef = useRef(useSimulation.getState().fieldSources);
+
+  // Suscripción directa al store — actualiza las refs en cada cambio de estado
   useEffect(() => {
-    meshRef.current?.position.copy(position);
-  }, [position]);
+    const unsub = useSimulation.subscribe((state) => {
+      positionRef.current = state.position.clone();
+      velocityRef.current = state.velocity.clone();
+      isRunningRef.current = state.isRunning;
+      isFieldActiveRef.current = state.isFieldActive;
+      chargeRef.current = state.charge;
+      massRef.current = state.mass;
+      fieldSourcesRef.current = state.fieldSources;
+    });
 
-  // Modifica el useFrame en Particle.tsx
+    // Inicializar con el estado actual
+    const initial = useSimulation.getState();
+    positionRef.current = initial.position.clone();
+    velocityRef.current = initial.velocity.clone();
+    isRunningRef.current = initial.isRunning;
+    isFieldActiveRef.current = initial.isFieldActive;
+    chargeRef.current = initial.charge;
+    massRef.current = initial.mass;
+    fieldSourcesRef.current = initial.fieldSources;
+
+    return unsub;
+  }, []);
+
+  // Sincronizar posición visual cuando la simulación no está corriendo
+  // (reset, cambio de posición inicial, etc.)
+  const { updateStep, trailVersion } = useSimulation();
+
   useFrame((state, delta) => {
-    if (!isRunning) {
-      // Si no está corriendo, forzamos la posición inicial visualmente
+    if (!isRunningRef.current) {
       if (meshRef.current) {
-        meshRef.current.position.copy(position);
+        meshRef.current.position.copy(positionRef.current);
       }
       return;
     }
 
-    const dt = Math.min(delta, 0.01);
+    // dt acotado para evitar explosiones numéricas en frames lentos
+    const dt = Math.min(delta, 0.016);
+
     const nextStep = stepRK4(
-      { position, velocity },
+      {
+        position: positionRef.current,
+        velocity: velocityRef.current,
+      },
       (samplePosition, time) =>
-        sampleCombinedFields(fieldSources, samplePosition, time, isFieldActive),
-      charge,
-      mass,
+        sampleCombinedFields(
+          fieldSourcesRef.current,
+          samplePosition,
+          time,
+          isFieldActiveRef.current,
+        ),
+      chargeRef.current,
+      massRef.current,
       dt,
       state.clock.elapsedTime,
     );
 
+    // Actualizamos refs inmediatamente para el próximo frame
+    positionRef.current = nextStep.position.clone();
+    velocityRef.current = nextStep.velocity.clone();
+
+    // Actualizamos el store (para HUD, trail key, etc.)
     updateStep(nextStep.position, nextStep.velocity);
 
+    // Actualizamos la malla 3D directamente — más rápido que esperar re-render
     if (meshRef.current) {
       meshRef.current.position.copy(nextStep.position);
     }
@@ -55,13 +95,12 @@ export const Particle = () => {
 
   return (
     <group>
-      <mesh ref={meshRef} position={position}>
+      <mesh ref={meshRef}>
         <sphereGeometry args={[0.5, 32, 32]} />
         <meshBasicMaterial color="#F48FB1" />
         <pointLight distance={10} intensity={5} color="#F48FB1" />
       </mesh>
 
-      {/* Outer soft halo trail (wider, orange-ish) */}
       <Trail
         key={`outer-${trailVersion}`}
         target={trailTarget}
@@ -71,7 +110,6 @@ export const Particle = () => {
         attenuation={(t) => (1 - t) * (1 - t)}
       />
 
-      {/* Inner bright trail (thin, pink) */}
       <Trail
         key={`inner-${trailVersion}`}
         target={trailTarget}

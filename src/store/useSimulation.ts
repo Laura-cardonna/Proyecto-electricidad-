@@ -1,4 +1,3 @@
-// src/store/useSimulation.ts
 import { create } from "zustand";
 import * as THREE from "three";
 import {
@@ -37,8 +36,9 @@ interface SimulationState {
   bumpTrail: () => void;
 }
 
+// Velocidad inicial más baja para que el movimiento sea visible y observable
 const initialPosition = new THREE.Vector3(-10, 0, 0);
-const initialVelocity = new THREE.Vector3(15, 5, 0);
+const initialVelocity = new THREE.Vector3(3, 1, 0);
 
 export const useSimulation = create<SimulationState>((set) => ({
   initialPosition: initialPosition.clone(),
@@ -59,10 +59,12 @@ export const useSimulation = create<SimulationState>((set) => ({
       velocity: state.initialVelocity.clone(),
       trailVersion: state.trailVersion + 1,
     })),
+
   toggleSimulation: () =>
     set((state) => ({
       isRunning: !state.isRunning,
     })),
+
   toggleField: () => set((state) => ({ isFieldActive: !state.isFieldActive })),
 
   updateStep: (newPos, newVel) =>
@@ -113,16 +115,12 @@ export const useSimulation = create<SimulationState>((set) => ({
       ),
     })),
 
-  // En useSimulation.ts
   reset: () =>
-    set((state) => {
-      // 1. Detenemos cualquier cálculo antes de mover la posición
-      return {
-        isRunning: false,
-        isFieldActive: false,
-        position: state.initialPosition.clone(),
-        velocity: state.initialVelocity.clone(),
-        trailVersion: state.trailVersion + 1,
-      };
-    }),
+    set((state) => ({
+      isRunning: false,
+      isFieldActive: false,
+      position: state.initialPosition.clone(),
+      velocity: state.initialVelocity.clone(),
+      trailVersion: state.trailVersion + 1,
+    })),
 }));
