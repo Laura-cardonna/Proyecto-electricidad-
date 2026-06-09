@@ -1,3 +1,4 @@
+// src/core/fields.ts
 import * as THREE from "three";
 import { evaluate } from "mathjs";
 
@@ -5,6 +6,7 @@ export type FieldKind = "electric" | "magnetic";
 export type ElectricPolarity = "positive" | "negative";
 export type DipoleAxis = "x" | "y" | "z";
 export type DipoleSign = 1 | -1;
+export type MagneticMode = "dipole" | "formula";
 
 export interface FieldComponents {
   x: string;
@@ -28,6 +30,7 @@ export interface FieldSource {
   polarity: ElectricPolarity;
   dipoleAxis: DipoleAxis;
   dipoleSign: DipoleSign;
+  mode?: MagneticMode;
 }
 
 export interface FieldSample {
@@ -46,6 +49,7 @@ export interface FieldSourcePatch {
   polarity?: ElectricPolarity;
   dipoleAxis?: DipoleAxis;
   dipoleSign?: DipoleSign;
+  mode?: MagneticMode;
 }
 
 const createFieldId = (kind: FieldKind) =>
@@ -78,11 +82,18 @@ const sampleDipoleField = (
 ): THREE.Vector3 => {
   const r2 = relX ** 2 + relY ** 2 + relZ ** 2;
   const r = Math.sqrt(r2);
-  if (r < 0.3) return createVector(0, 0, 0);
 
   const mx = axis === "x" ? sign : 0;
   const my = axis === "y" ? sign : 0;
   const mz = axis === "z" ? sign : 0;
+
+  // CORRECCIÓN FÍSICA: Bucle interno.
+  // Evitamos la singularidad en r=0 estableciendo un núcleo magnético interno.
+  // Dentro de este radio, el campo empuja directamente de Sur a Norte para cerrar el lazo.
+  if (r < 0.4) {
+    const internalScale = strength / (0.4 ** 3);
+    return createVector(mx * internalScale, my * internalScale, mz * internalScale);
+  }
 
   const rx = relX / r;
   const ry = relY / r;
@@ -104,11 +115,19 @@ export const createFieldSource = (
   kind: FieldKind,
   overrides: Partial<FieldSource> = {},
 ): FieldSource => {
+  // Paletas de colores para diferenciar las cargas cuando se agregan dinámicamente
+  const PALETAS = {
+    electric: ["#ff9f68", "#ff6b6b", "#feca57", "#ff9ff3", "#ff7f50"],
+    magnetic: ["#66d9ff", "#48dbfb", "#0abde3", "#54a0ff", "#00d2d3"]
+  };
+  
+  const colorAleatorio = PALETAS[kind][Math.floor(Math.random() * PALETAS[kind].length)];
+
   const defaultsByKind: Record<FieldKind, Omit<FieldSource, "id">> = {
     electric: {
       kind: "electric",
       name: "Carga eléctrica",
-      color: "#ff9f68",
+      color: colorAleatorio, // <-- Usamos el color dinámico
       position: { x: 0, y: 0, z: 0 },
       strength: 5,
       enabled: true,
@@ -124,13 +143,14 @@ export const createFieldSource = (
     magnetic: {
       kind: "magnetic",
       name: "Carga magnética",
-      color: "#66d9ff",
+      color: colorAleatorio, // <-- Usamos el color dinámico
       position: { x: 0, y: 0, z: 0 },
       strength: 2.5,
       enabled: true,
       polarity: "positive",
       dipoleAxis: "y",
       dipoleSign: 1,
+      mode: "dipole",
       components: {
         x: "0",
         y: "0",
@@ -167,6 +187,7 @@ export const createDefaultFieldSources = () => [
     name: "Carga magnética B",
     dipoleAxis: "y",
     dipoleSign: 1,
+    mode: "dipole",
   }),
 ];
 
@@ -183,18 +204,43 @@ export const sampleFieldSource = (
     0.0001,
   );
 
+  // MODO MAGNÉTICO
   if (source.kind === "magnetic") {
-    const dipoleField = sampleDipoleField(
-      relativeX,
-      relativeY,
-      relativeZ,
-      source.dipoleAxis,
-      source.dipoleSign,
-      source.strength,
-    );
-    return { electric: createVector(0, 0, 0), magnetic: dipoleField };
+    // Si estamos en modo fórmula libre
+    if (source.mode === "formula") {
+      const scope = {
+        x: relativeX,
+        y: relativeY,
+        z: relativeZ,
+        r: radius,
+        t: time,
+        strength: source.strength,
+        pi: Math.PI,
+        e: Math.E,
+      };
+
+      const vector = createVector(
+        evaluateComponent(source.components.x, scope) * source.strength,
+        evaluateComponent(source.components.y, scope) * source.strength,
+        evaluateComponent(source.components.z, scope) * source.strength,
+      );
+      return { electric: createVector(0, 0, 0), magnetic: vector };
+    } 
+    // Si estamos en modo dipolo físico
+    else {
+      const dipoleField = sampleDipoleField(
+        relativeX,
+        relativeY,
+        relativeZ,
+        source.dipoleAxis,
+        source.dipoleSign,
+        source.strength,
+      );
+      return { electric: createVector(0, 0, 0), magnetic: dipoleField };
+    }
   }
 
+  // MODO ELÉCTRICO
   const scope = {
     x: relativeX,
     y: relativeY,
@@ -268,7 +314,8 @@ export const createFieldLineSeeds = (
 ): THREE.Vector3[] => {
   const seeds: THREE.Vector3[] = [];
 
-  if (source.kind === "electric") {
+  // Las cargas eléctricas y los campos magnéticos por fórmula usan distribución esférica
+  if (source.kind === "electric" || (source.kind === "magnetic" && source.mode === "formula")) {
     const goldenAngle = Math.PI * (3 - Math.sqrt(5));
     for (let i = 0; i < count; i++) {
       const y = 1 - (i / (count - 1)) * 2;
@@ -285,9 +332,14 @@ export const createFieldLineSeeds = (
     return seeds;
   }
 
+  // Generación exclusiva para Dipolos Físicos
   const axis = source.dipoleAxis;
-  const polarAngles = [20, 40, 60, 80].map((deg) => (deg * Math.PI) / 180);
-  const azimuthalCount = Math.max(3, Math.round(count / polarAngles.length));
+  
+  // REDUCCIÓN DE LÍNEAS: Solo usamos 2 ángulos polares en lugar de 5 para despejar la vista
+  const polarAngles = [35, 75].map((deg) => (deg * Math.PI) / 180);
+  
+  // Fijo a 4 líneas por cada ángulo (total 8 líneas por polo = 16 líneas por imán)
+  const azimuthalCount = 4;
   const seedRadius = 1.4;
 
   for (const polar of polarAngles) {
@@ -297,18 +349,19 @@ export const createFieldLineSeeds = (
       const cosPolar = Math.cos(polar);
       let sx = 0, sy = 0, sz = 0;
 
+      // Aplicamos dipoleSign para que nazcan desde el polo correcto
       if (axis === "y") {
         sx = sinPolar * Math.cos(azimuth) * seedRadius;
-        sy = cosPolar * seedRadius;
+        sy = cosPolar * seedRadius * source.dipoleSign; 
         sz = sinPolar * Math.sin(azimuth) * seedRadius;
       } else if (axis === "x") {
-        sx = cosPolar * seedRadius;
+        sx = cosPolar * seedRadius * source.dipoleSign; 
         sy = sinPolar * Math.cos(azimuth) * seedRadius;
         sz = sinPolar * Math.sin(azimuth) * seedRadius;
       } else {
         sx = sinPolar * Math.cos(azimuth) * seedRadius;
         sy = sinPolar * Math.sin(azimuth) * seedRadius;
-        sz = cosPolar * seedRadius;
+        sz = cosPolar * seedRadius * source.dipoleSign; 
       }
 
       seeds.push(
@@ -329,8 +382,8 @@ export const traceFieldLine = (
   seed: THREE.Vector3,
   direction: 1 | -1,
   allSources: FieldSource[] = [],
-  steps = 220,
-  stepSize = 0.20,
+  steps = 800,       
+  stepSize = 0.18,    
 ): THREE.Vector3[] => {
   const points = [seed.clone()];
   let current = seed.clone();
@@ -339,22 +392,17 @@ export const traceFieldLine = (
   for (let stepIndex = 0; stepIndex < steps; stepIndex++) {
     let fieldVector = new THREE.Vector3(0, 0, 0);
 
-    if (source.kind === "electric") {
-      // 1. SUPERPOSICIÓN: Usamos el campo TOTAL de la escena.
-      const combined = sampleCombinedFields(allSources, current, 0, true);
-      fieldVector = combined.electric.clone();
+    // 1. SUPERPOSICIÓN TOTAL: Calculamos el campo sumado de toda la escena
+    const combined = sampleCombinedFields(allSources, current, 0, true);
 
-      // 2. INVERSIÓN FÍSICA PARA EL TRAZADO:
-      // El campo de una carga negativa apunta hacia ella. 
-      // Para poder trazar la línea hacia el infinito partiendo desde la semilla,
-      // caminamos en la dirección opuesta al campo (-E).
+    if (source.kind === "electric") {
+      fieldVector = combined.electric.clone();
       if (source.polarity === "negative") {
         fieldVector.negate();
       }
     } else {
-      // Magnética: Solo el dipolo propio
-      const sample = sampleFieldSource(source, current, 0);
-      fieldVector = sample.magnetic.clone();
+      // 2. AHORA EL CAMPO MAGNÉTICO TAMBIÉN USA LA SUPERPOSICIÓN
+      fieldVector = combined.magnetic.clone();
     }
 
     if (fieldVector.lengthSq() < 0.000001) break;
@@ -365,7 +413,7 @@ export const traceFieldLine = (
       .multiplyScalar(stepSize * direction);
     current = current.clone().add(stepVector);
 
-    // Parada 1: Absorción por OTRA carga eléctrica
+    // ── PARADAS ELÉCTRICAS ──
     if (source.kind === "electric") {
       const absorbed = allSources.some((other) => {
         if (other.id === source.id || other.kind !== "electric") return false;
@@ -379,28 +427,42 @@ export const traceFieldLine = (
       }
     }
 
-    // Parada 2: Línea magnética cierra el lazo
-    if (
-      source.kind === "magnetic" &&
-      stepIndex > 15 &&
-      current.distanceTo(seed) < stepSize * 2.5
-    ) {
-      points.push(seed.clone());
-      break;
+    // ── PARADAS MAGNÉTICAS (Nueva lógica para múltiples imanes) ──
+    if (source.kind === "magnetic") {
+      const closeTolerance = stepSize * 4; 
+
+      // Caso A: La línea da la vuelta y cierra en su propio imán
+      if (stepIndex > 25 && current.distanceTo(seed) < closeTolerance) {
+        points.push(seed.clone());
+        return points;
+      }
+
+      // Caso B: La línea viaja y es absorbida por el polo de OTRO imán
+      const absorbedByOtherMagnet = allSources.some((other) => {
+        if (other.id === source.id || other.kind !== "magnetic") return false;
+        return current.distanceTo(
+          new THREE.Vector3(other.position.x, other.position.y, other.position.z)
+        ) < 0.8; // Radio de captura del polo del otro imán
+      });
+
+      if (stepIndex > 10 && absorbedByOtherMagnet) {
+        points.push(current.clone());
+        return points; // Bucle cerrado exitosamente en el otro imán
+      }
     }
 
-    // Parada 3: Se aleja demasiado
     if (current.length() > 60) break;
 
     points.push(current.clone());
   }
 
-  // 3. MAGIA PARA LAS FLECHAS:
-  // Si la carga es negativa, la línea se trazó de adentro hacia afuera.
-  // Invertimos el arreglo de puntos para que vaya de "afuera hacia adentro".
-  // Así las flechas (que se calculan como P_siguiente - P_actual) apuntarán correctamente.
   if (source.kind === "electric" && source.polarity === "negative") {
     points.reverse();
+  }
+
+  // Descartar líneas a medias que no lograron cerrar en ningún imán
+  if (source.kind === "magnetic" && points.length >= steps) {
+     return [];
   }
 
   return points;

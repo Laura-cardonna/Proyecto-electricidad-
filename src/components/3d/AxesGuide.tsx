@@ -1,143 +1,70 @@
-import { Html, Line } from "@react-three/drei";
-import type { CSSProperties } from "react";
-
-const AXIS_TICK_STEP = 10;
-
-const axisLabelStyle: CSSProperties = {
-  pointerEvents: "none",
-  userSelect: "none",
-  fontSize: "10px",
-  fontWeight: 700,
-  letterSpacing: "0.3em",
-  textTransform: "uppercase",
-  textShadow: "0 0 6px rgba(0,0,0,0.7)",
-};
-
-const tickMarks = Array.from(
-  { length: 8 },
-  (_, index) => (index + 1) * AXIS_TICK_STEP,
-);
+import React from "react";
 
 interface AxesGuideProps {
-  length: number;
+  length?: number;
 }
 
-export const AxesGuide = ({ length }: AxesGuideProps) => {
-  const tickCount = Math.max(1, Math.floor(length / AXIS_TICK_STEP));
-  const activeTicks = tickMarks.slice(0, tickCount);
+export const AxesGuide: React.FC<AxesGuideProps> = ({ length = 100 }) => {
+  // Configuración visual de los ejes
+  const thickness = 0.07; // Grosor del cilindro
+  const fullLength = length * 2; // Cruzar el origen hacia los negativos
+  const arrowRadius = thickness * 4;
+  const arrowHeight = thickness * 10;
+
+  // Colores exactos extraídos del componente HUD
+  const colorX = "#d8b9ff"; // Morado pastel
+  const colorY = "#a9f0ad"; // Verde pastel
+  const colorZ = "#7fd9ff"; // Azul pastel
+
+  // Configuración del material para un acabado mate y suave
+  const materialConfig = {
+    roughness: 0.9, // Muy rugoso para que no brille como plástico
+    metalness: 0.1, // Ligeramente metálico para que capte bien las luces
+  };
 
   return (
     <group>
-      <Line
-        points={[
-          [-length, 0, 0],
-          [length, 0, 0],
-        ]}
-        color="#c8a2ff"
-        lineWidth={1.5}
-        transparent
-        opacity={0.58}
-      />
-      <Line
-        points={[
-          [0, -length, 0],
-          [0, length, 0],
-        ]}
-        color="#7ee081"
-        lineWidth={1.5}
-        transparent
-        opacity={0.62}
-      />
-      <Line
-        points={[
-          [0, 0, -length],
-          [0, 0, length],
-        ]}
-        color="#7fd9ff"
-        lineWidth={1.5}
-        transparent
-        opacity={0.62}
-      />
+      {/* ─── EJE X (MORADO) ─── */}
+      <group>
+        {/* Cuerpo del eje */}
+        <mesh rotation={[0, 0, Math.PI / 2]}>
+          <cylinderGeometry args={[thickness, thickness, fullLength, 12]} />
+          <meshStandardMaterial color={colorX} {...materialConfig} />
+        </mesh>
+        {/* Flecha apuntando al X positivo */}
+        <mesh position={[length, 0, 0]} rotation={[0, 0, -Math.PI / 2]}>
+          <coneGeometry args={[arrowRadius, arrowHeight, 12]} />
+          <meshStandardMaterial color={colorX} {...materialConfig} />
+        </mesh>
+      </group>
 
-      {activeTicks.map((distance) => (
-        <group key={`x-tick-${distance}`}>
-          <Line
-            points={[
-              [distance, -0.35, 0],
-              [distance, 0.35, 0],
-            ]}
-            color="#ff6b6b"
-            lineWidth={1}
-            transparent
-            opacity={0.28}
-          />
-          <Line
-            points={[
-              [-distance, -0.35, 0],
-              [-distance, 0.35, 0],
-            ]}
-            color="#c8a2ff"
-            lineWidth={1}
-            transparent
-            opacity={0.18}
-          />
-          <Line
-            points={[
-              [0.35, distance, 0],
-              [-0.35, distance, 0],
-            ]}
-            color="#7ee081"
-            lineWidth={1}
-            transparent
-            opacity={0.18}
-          />
-          <Line
-            points={[
-              [0.35, -distance, 0],
-              [-0.35, -distance, 0],
-            ]}
-            color="#7ee081"
-            lineWidth={1}
-            transparent
-            opacity={0.18}
-          />
-          <Line
-            points={[
-              [0, -0.35, distance],
-              [0, 0.35, distance],
-            ]}
-            color="#7fd9ff"
-            lineWidth={1}
-            transparent
-            opacity={0.18}
-          />
-          <Line
-            points={[
-              [0, -0.35, -distance],
-              [0, 0.35, -distance],
-            ]}
-            color="#7fd9ff"
-            lineWidth={1}
-            transparent
-            opacity={0.18}
-          />
-        </group>
-      ))}
+      {/* ─── EJE Y (VERDE) ─── */}
+      <group>
+        {/* Cuerpo del eje */}
+        <mesh>
+          <cylinderGeometry args={[thickness, thickness, fullLength, 12]} />
+          <meshStandardMaterial color={colorY} {...materialConfig} />
+        </mesh>
+        {/* Flecha apuntando al Y positivo */}
+        <mesh position={[0, length, 0]}>
+          <coneGeometry args={[arrowRadius, arrowHeight, 12]} />
+          <meshStandardMaterial color={colorY} {...materialConfig} />
+        </mesh>
+      </group>
 
-      <mesh position={[0, 0, 0]}>
-        <sphereGeometry args={[0.08, 12, 12]} />
-        <meshBasicMaterial color="#f5f5f5" transparent opacity={0.8} />
-      </mesh>
-
-      <Html center distanceFactor={18} position={[length + 0.5, 0, 0]}>
-        <div style={{ ...axisLabelStyle, color: "#d8b9ff" }}>X</div>
-      </Html>
-      <Html center distanceFactor={18} position={[0, length + 0.5, 0]}>
-        <div style={{ ...axisLabelStyle, color: "#a9f0ad" }}>Y</div>
-      </Html>
-      <Html center distanceFactor={18} position={[0, 0, length + 0.5]}>
-        <div style={{ ...axisLabelStyle, color: "#7fd9ff" }}>Z</div>
-      </Html>
+      {/* ─── EJE Z (AZUL) ─── */}
+      <group>
+        {/* Cuerpo del eje */}
+        <mesh rotation={[Math.PI / 2, 0, 0]}>
+          <cylinderGeometry args={[thickness, thickness, fullLength, 12]} />
+          <meshStandardMaterial color={colorZ} {...materialConfig} />
+        </mesh>
+        {/* Flecha apuntando al Z positivo */}
+        <mesh position={[0, 0, length]} rotation={[Math.PI / 2, 0, 0]}>
+          <coneGeometry args={[arrowRadius, arrowHeight, 12]} />
+          <meshStandardMaterial color={colorZ} {...materialConfig} />
+        </mesh>
+      </group>
     </group>
   );
 };

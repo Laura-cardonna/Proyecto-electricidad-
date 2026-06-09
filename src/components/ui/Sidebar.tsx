@@ -299,88 +299,114 @@ export const Sidebar = () => {
               {/* ── Controles MAGNÉTICA ── */}
               {source.kind === "magnetic" && (
                 <div className="space-y-3">
-                  <div className="space-y-1">
-                    <span className="text-[10px] text-white/60 uppercase tracking-widest">
-                      Eje del dipolo (Geometría)
-                    </span>
-                    <div className="grid grid-cols-3 gap-2">
-                      {(["x", "y", "z"] as const).map((ax) => (
-                        <button
-                          key={ax}
-                          onClick={() =>
-                            updateFieldSource(source.id, {
-                              dipoleAxis: ax as DipoleAxis,
-                            })
-                          }
-                          className={`py-2 rounded-xl font-bold text-sm border-2 transition-all ${
-                            source.dipoleAxis === ax
-                              ? "border-cyan-400 bg-cyan-400/20 text-cyan-200"
-                              : "border-white/10 text-white/40 hover:border-white/30"
-                          }`}
-                        >
-                          {ax.toUpperCase()}
-                        </button>
-                      ))}
-                    </div>
+                  {/* Selector de Modo */}
+                  <div className="flex bg-black/40 rounded-lg p-1 border border-white/5">
+                    <button
+                      onClick={() => updateFieldSource(source.id, { mode: "dipole" })}
+                      className={`flex-1 text-[10px] py-1.5 rounded-md font-bold transition-all tracking-wider ${
+                        source.mode !== "formula"
+                          ? "bg-cyan-500/30 text-cyan-100 shadow-[0_0_10px_rgba(34,211,238,0.2)]"
+                          : "text-white/40 hover:text-white/70"
+                      }`}
+                    >
+                      DIPOLO FÍSICO
+                    </button>
+                    <button
+                      onClick={() => updateFieldSource(source.id, { mode: "formula" })}
+                      className={`flex-1 text-[10px] py-1.5 rounded-md font-bold transition-all tracking-wider ${
+                        source.mode === "formula"
+                          ? "bg-cyan-500/30 text-cyan-100 shadow-[0_0_10px_rgba(34,211,238,0.2)]"
+                          : "text-white/40 hover:text-white/70"
+                      }`}
+                    >
+                      FÓRMULA LIBRE
+                    </button>
                   </div>
 
-                  <div className="space-y-1">
-                    <span className="text-[10px] text-white/60 uppercase tracking-widest">
-                      Orientación Polo Norte
-                    </span>
-                    <div className="grid grid-cols-2 gap-2">
-                      <button
-                        onClick={() =>
-                          updateFieldSource(source.id, { dipoleSign: 1 })
-                        }
-                        className={`py-2 rounded-xl font-bold text-sm border-2 transition-all ${
-                          source.dipoleSign === 1
-                            ? "border-cyan-400 bg-cyan-400/20 text-cyan-200"
-                            : "border-white/10 text-white/40 hover:border-white/30"
-                        }`}
-                      >
-                        +{source.dipoleAxis.toUpperCase()} (Norte)
-                      </button>
-                      <button
-                        onClick={() =>
-                          updateFieldSource(source.id, { dipoleSign: -1 })
-                        }
-                        className={`py-2 rounded-xl font-bold text-sm border-2 transition-all ${
-                          source.dipoleSign === -1
-                            ? "border-purple-400 bg-purple-400/20 text-purple-200"
-                            : "border-white/10 text-white/40 hover:border-white/30"
-                        }`}
-                      >
-                        −{source.dipoleAxis.toUpperCase()} (Sur)
-                      </button>
-                    </div>
-                  </div>
+                  {/* VISTA 1: Modo Dipolo (Por defecto) */}
+                  {source.mode !== "formula" && (
+                    <>
+                      <div className="space-y-1">
+                        <span className="text-[10px] text-white/60 uppercase tracking-widest">
+                          Eje del dipolo (Geometría)
+                        </span>
+                        <div className="grid grid-cols-3 gap-2">
+                          {(["x", "y", "z"] as const).map((ax) => (
+                            <button
+                              key={ax}
+                              onClick={() => updateFieldSource(source.id, { dipoleAxis: ax as DipoleAxis })}
+                              className={`py-2 rounded-xl font-bold text-sm border-2 transition-all ${
+                                source.dipoleAxis === ax
+                                  ? "border-cyan-400 bg-cyan-400/20 text-cyan-200"
+                                  : "border-white/10 text-white/40 hover:border-white/30"
+                              }`}
+                            >
+                              {ax.toUpperCase()}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
 
-                  {/* ── RESTAURADO: Fórmulas Analíticas ── */}
-                  <div className="space-y-1 pt-2 border-t border-white/10">
-                    <span className="text-[10px] text-cyan-200/60 uppercase tracking-widest">
-                      Fórmulas Analíticas (x, y, z)
-                    </span>
-                    <div className="grid grid-cols-3 gap-2">
-                      {(["x", "y", "z"] as const).map((comp) => (
-                        <input
-                          key={`formula-${comp}`}
-                          type="text"
-                          value={source.components[comp]}
-                          onChange={(e) =>
-                            updateFieldSource(source.id, {
-                              components: {
-                                ...source.components,
-                                [comp]: e.target.value,
-                              },
-                            })
-                          }
-                          className="w-full rounded-lg bg-black/30 border border-white/10 px-2 py-2 text-white text-[11px] font-mono focus:border-cyan-400/50 outline-none"
-                          placeholder={comp}
-                        />
-                      ))}
+                      <div className="space-y-1">
+                        <span className="text-[10px] text-white/60 uppercase tracking-widest">
+                          Orientación Polo Norte
+                        </span>
+                        <div className="grid grid-cols-2 gap-2">
+                          <button
+                            onClick={() => updateFieldSource(source.id, { dipoleSign: 1 })}
+                            className={`py-2 rounded-xl font-bold text-sm border-2 transition-all ${
+                              source.dipoleSign === 1
+                                ? "border-cyan-400 bg-cyan-400/20 text-cyan-200"
+                                : "border-white/10 text-white/40 hover:border-white/30"
+                            }`}
+                          >
+                            +{source.dipoleAxis.toUpperCase()} (Norte)
+                          </button>
+                          <button
+                            onClick={() => updateFieldSource(source.id, { dipoleSign: -1 })}
+                            className={`py-2 rounded-xl font-bold text-sm border-2 transition-all ${
+                              source.dipoleSign === -1
+                                ? "border-purple-400 bg-purple-400/20 text-purple-200"
+                                : "border-white/10 text-white/40 hover:border-white/30"
+                            }`}
+                          >
+                            −{source.dipoleAxis.toUpperCase()} (Sur)
+                          </button>
+                        </div>
+                      </div>
+                    </>
+                  )}
+
+                  {/* VISTA 2: Modo Fórmula Analítica */}
+                  {source.mode === "formula" && (
+                    <div className="space-y-2 pt-1">
+                      <span className="text-[10px] text-cyan-200/80 uppercase tracking-widest">
+                        Distribución Geométrica (x, y, z)
+                      </span>
+                      <div className="grid grid-cols-3 gap-2">
+                        {(["x", "y", "z"] as const).map((comp) => (
+                          <input
+                            key={`formula-${comp}`}
+                            type="text"
+                            value={source.components?.[comp] || ""}
+                            onChange={(e) =>
+                              updateFieldSource(source.id, {
+                                components: {
+                                  ...(source.components || {x:"0", y:"0", z:"0"}),
+                                  [comp]: e.target.value,
+                                },
+                              })
+                            }
+                            className="w-full rounded-lg bg-black/40 border border-cyan-400/20 px-2 py-2 text-cyan-100 text-[11px] font-mono focus:border-cyan-400 outline-none placeholder:text-white/20"
+                            placeholder={comp}
+                          />
+                        ))}
+                      </div>
+                      <p className="text-[9px] text-white/40 italic">
+                        Usa variables x, y, z, r. Ej: -y/(r+1)
+                      </p>
                     </div>
-                  </div>
+                  )}
                 </div>
               )}
 
