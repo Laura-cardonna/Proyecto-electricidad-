@@ -48,7 +48,7 @@ export const Sidebar = () => {
   return (
     <div className="absolute top-5 right-5 z-20 w-[26rem] max-h-[calc(100vh-2.5rem)] overflow-y-auto p-6 bg-white/10 backdrop-blur-md border border-pink-200/30 rounded-2xl shadow-2xl">
       <h1 className="text-pink-300 font-bold text-xl mb-2 tracking-wider">
-        MISION CONTROL
+        PANEL DE CONTROL
       </h1>
       <p className="text-xs text-white/60 mb-5">
         Configura la partícula, define varias cargas y luego activa la
