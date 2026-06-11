@@ -98,12 +98,16 @@ const sampleDipoleField = (
   const rx = relX / r;
   const ry = relY / r;
   const rz = relZ / r;
-
+  //Producto punto 
   const mDotR = mx * rx + my * ry + mz * rz;
 
   const r3 = r2 * r;
   const scale = strength / r3;
 
+  /*3 * mDotR * rx: Esta parte intenta empujar la partícula hacia afuera de los polos. El "3" es una constante matemática de la geometría en 3D.
+  - mx: Esta parte intenta jalar la partícula hacia la dirección del imán.
+ Al restar esas dos cosas, la fuerza no puede ir en línea recta. Se ve obligada a curvarse.
+  */
   return createVector(
     scale * (3 * mDotR * rx - mx),
     scale * (3 * mDotR * ry - my),
